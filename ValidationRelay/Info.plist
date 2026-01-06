@@ -5,6 +5,11 @@
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>processing</string>
+        <string>location</string>
 	</array>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>ValidationRelay needs location access to maintain a persistent connection to the relay server in the background.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>ValidationRelay needs location access to maintain a persistent connection to the relay server in the background.</string>
 </dict>
 </plist>

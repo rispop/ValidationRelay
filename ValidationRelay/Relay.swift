@@ -3,12 +3,14 @@
 //  ValidationRelay
 //
 //  Created by James Gill on 3/25/24.
+//  Keep Alive with Location by Rishab Pradeep on 1/6/25
 //
 
 import Foundation
 import Network
 import NWWebSocket
 import SwiftUI
+import CoreLocation
 
 func getIdentifiers() -> [String: String] {
     var ustruct: utsname = utsname()
@@ -33,7 +35,7 @@ func getIdentifiers() -> [String: String] {
     return identifiers
 }
 
-class RelayConnectionManager: ObservableObject {
+class RelayConnectionManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published var registrationCode: String = "None"
     @Published var connectionStatusMessage: String = ""
     @Published var logItems = LogItems()
@@ -50,6 +52,26 @@ class RelayConnectionManager: ObservableObject {
     
     var backoff: Int = 2
     let maxBackoff: Int = 64
+    
+    // Location Manager setup
+    private var locationManager: CLLocationManager?
+
+    override init() {
+        super.init()
+        setupLocationManager()
+    }
+
+    func setupLocationManager() {
+        locationManager = CLLocationManager()
+        locationManager?.delegate = self
+        
+        locationManager?.desiredAccuracy = kCLLocationAccuracyThreeKilometers
+        
+        locationManager?.allowsBackgroundLocationUpdates = true
+        locationManager?.pausesLocationUpdatesAutomatically = false
+        
+        locationManager?.requestAlwaysAuthorization()
+    }
 
     func connect(_ url: URL) {
         logItems.log("Connecting to \(url)")
@@ -62,6 +84,9 @@ class RelayConnectionManager: ObservableObject {
         reconnectWork = nil
 
         connectionDelegate = RelayConnectionDelegate(manager: self)
+        // begin location update
+        logItems.log("Starting background location updates")
+        locationManager?.startUpdatingLocation()
     }
 
     func disconnect() {
@@ -74,6 +99,9 @@ class RelayConnectionManager: ObservableObject {
         
         connectionDelegate?.disconnect()
         connectionDelegate = nil
+
+        logItems.log("Stopping background location updates")
+        locationManager?.stopUpdatingLocation()
     }
 
     func triggerReconnect() {
@@ -95,6 +123,14 @@ class RelayConnectionManager: ObservableObject {
         
         reconnectWork = work
         backoff = min(backoff * 2, maxBackoff)
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        // No need for the data
+    }
+    
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        logItems.log("Location manager error: \(error.localizedDescription)", isError: true)
     }
 }
 
